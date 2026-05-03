@@ -1,0 +1,111 @@
+.spec:
+  interruptible: true
+  variables:
+    TF_IN_AUTOMATION: "true"
+
+terraform_fmt:
+  extends: .spec
+  stage: validate
+  image:
+    name: hashicorp/terraform:1.15
+    entrypoint: [""]
+  script:
+    - cd infra/terraform/environments/prod
+    - terraform fmt -check -recursive ../..
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+terraform_validate:
+  extends: .spec
+  stage: validate
+  image:
+    name: hashicorp/terraform:1.15
+    entrypoint: [""]
+  script:
+    - export TF_VAR_ssh_public_key="${TF_VAR_ssh_public_key:-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICR0ZjJ2YWxpZGF0ZS1zcGFjZSBvbmx5Cn0gcGxhY2Vob2xkZXIgdGVzdAo= terraform-ci-validate-placeholder}"
+    - |
+      set -e
+      for env in prod stage; do
+        echo "=== validate infra/terraform/environments/$env ==="
+        cd infra/terraform/environments/$env
+        terraform init -backend=false -input=false
+        terraform validate
+        cd "$CI_PROJECT_DIR"
+      done
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+terraform_plan:
+  extends: .spec
+  stage: plan
+  image:
+    name: hashicorp/terraform:1.15
+    entrypoint: [""]
+  script:
+    - cd infra/terraform/environments/prod
+    - terraform init -input=false
+    - terraform plan -out=tfplan -input=false
+  artifacts:
+    paths:
+      - infra/terraform/environments/prod/tfplan
+      - infra/terraform/environments/prod/.terraform.lock.hcl
+    expire_in: 5 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+# Scheduled drift sentinel — identical to plan; enable GitLab Pipeline Schedules pointing at default branch.
+terraform_plan_drift:
+  extends: .spec
+  stage: plan
+  image:
+    name: hashicorp/terraform:1.15
+    entrypoint: [""]
+  script:
+    - cd infra/terraform/environments/prod
+    - terraform init -input=false
+    - |
+      set +e
+      terraform plan -detailed-exitcode -input=false
+      PLAN_EXIT=$?
+      set -e
+      case "$PLAN_EXIT" in
+        0) exit 0 ;;
+        2) echo "FAILED: infra drift detected (terraform plan detailed exit code 2)."; exit 1 ;;
+        *) echo "Terraform plan failed ($PLAN_EXIT)"; exit 1 ;;
+      esac
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+terraform_apply:
+  extends: .spec
+  stage: apply
+  needs: ["terraform_plan"]
+  image:
+    name: hashicorp/terraform:1.15
+    entrypoint: [""]
+  script:
+    - cd infra/terraform/environments/prod
+    - terraform init -input=false
+    - |
+      if [ -f tfplan ]; then
+        terraform apply -auto-approve -input=false tfplan;
+      else
+        echo "No tfplan artifact; running fresh apply disabled for safety.";
+        exit 1;
+      fi
+  environment:
+    name: production
+    action: start
+  when: manual
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

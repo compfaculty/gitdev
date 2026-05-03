@@ -1,0 +1,17 @@
+# Terraform
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/.terraform/
+**/crash.log
+infra/terraform/**/*.tfvars
+!infra/terraform/**/*.tfvars.example
+
+# Ansible
+infra/ansible/group_vars/vault.yml
+infra/ansible/inventory/prod.*
+infra/ansible/inventory/generated.*
+
+# Editors
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,7 @@
+# Replace @SECURITY_PLATFORM with GitLab username or group slug before enforcing branch rules
+# Example: `/infra/terraform/ @corp/security-platform-maintainers`
+/infra/terraform/       @SECURITY_PLATFORM
+/infra/ansible/         @SECURITY_PLATFORM
+/infra/ci/              @SECURITY_PLATFORM
+/platform/policies/    @SECURITY_PLATFORM
+/docs/prd/              @SECURITY_PLATFORM

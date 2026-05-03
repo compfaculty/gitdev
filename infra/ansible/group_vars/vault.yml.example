@@ -1,0 +1,13 @@
+---
+# Encrypt with: ansible-vault encrypt group_vars/vault.yml   (after renaming from .example -> vault.yml)
+vault_gitlab_root_password: "REPLACE_WITH_STRONG_RANDOM"
+vault_wireguard_server_private_key: "GENERATE_WITH_wireguard_tools"
+vault_gitlab_runner_registration_token: "FROM_GITLAB_ADMIN_RUNNER_TOKEN"
+
+# Optional Omnibus GitLab backups to S3-compatible storage (requires gitlab_backup_object_storage_enabled=true)
+vault_gitlab_backup_access_key_id: "REPLACE_OR_OMIT"
+vault_gitlab_backup_secret_access_key: "REPLACE_OR_OMIT"
+
+# Optional SSO (gitlab_oidc_enabled=true)
+vault_gitlab_oidc_client_id: "REPLACE_OR_OMIT"
+vault_gitlab_oidc_client_secret: "REPLACE_OR_OMIT"

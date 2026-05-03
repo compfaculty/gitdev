@@ -1,0 +1,28 @@
+---
+
+- name: Require vault-derived WireGuard private key variable
+  ansible.builtin.assert:
+    that:
+      - wireguard_server_private_key | default('') | length > 0
+      - wireguard_server_private_key != 'GENERATE_WITH_wireguard_tools'
+    fail_msg: >-
+      Populate vault_wireguard_server_private_key inside ansible-vault encrypted group_vars/vault.yml,
+      surfaced as wireguard_server_private_key role default, generated via `wg genkey`.
+
+- name: Ensure WireGuard is installed
+  ansible.builtin.apt:
+    name: wireguard
+    state: present
+
+- name: Deploy WireGuard server config
+  ansible.builtin.template:
+    src: wg0.conf.j2
+    dest: /etc/wireguard/wg0.conf
+    mode: "0600"
+  notify: Restart wg-quick@wg0
+
+- name: Enable WireGuard interface
+  ansible.builtin.systemd:
+    name: wg-quick@wg0
+    enabled: true
+    state: started

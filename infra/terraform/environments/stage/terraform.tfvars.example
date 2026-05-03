@@ -1,0 +1,10 @@
+project_name            = "secure-redblue-stage"
+location                = "nbg1"
+network_zone            = "eu-central"
+ssh_public_key          = "ssh-ed25519 AAAA ..."
+vpn_ingress_allowlist   = ["203.0.113.80/32"]
+ssh_bootstrap_allowlist = ["203.0.113.80/32"]
+gitlab_server_type      = "cx33"
+runner_server_type      = "cx22"
+runner_count            = 1
+tags                    = { team = "platform", tier = "stage" }

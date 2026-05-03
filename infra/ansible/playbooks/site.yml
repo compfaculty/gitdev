@@ -1,0 +1,13 @@
+---
+# Ordered full-stack converge — use after reviewing impact (long GitLab reconfigure possible).
+- name: Import platform baseline
+  ansible.builtin.import_playbook: hardening.yml
+
+- name: Import VPN bastion
+  ansible.builtin.import_playbook: bastion.yml
+
+- name: Import GitLab core
+  ansible.builtin.import_playbook: gitlab.yml
+
+- name: Import runners
+  ansible.builtin.import_playbook: runners.yml

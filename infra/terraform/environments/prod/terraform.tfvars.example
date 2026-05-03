@@ -1,0 +1,26 @@
+# Copy to terraform.tfvars (never commit secrets)
+project_name = "secure-redblue"
+location     = "nbg1"
+network_zone = "eu-central"
+
+ssh_public_key = "ssh-ed25519 AAAAyourkey... comment@vlan"
+
+# Hetzner HCLOUD_TOKEN must be exported before `terraform apply`
+# export HCLOUD_TOKEN="$(pass ... )"
+
+vpn_ingress_allowlist = ["203.0.113.50/32", "198.51.100.10/32"]
+ssh_bootstrap_allowlist = ["203.0.113.50/32"]
+
+gitlab_server_type = "cpx51"
+runner_count       = 1
+runner_server_type = "cx33"
+
+tags = {
+  team = "security-ops"
+}
+
+# Optional hardened public edge (disabled by default — see docs/howto/ddos_edge_pattern.md)
+# enable_ingress_edge       = true
+# ingress_edge_cdn_source_cidrs = ["173.245.48.0/20", "103.21.244.0/22"] # example — replace with YOUR CDN ranges
+# ingress_edge_private_ip   = "10.0.1.90"
+# ingress_edge_server_type  = "cx23"

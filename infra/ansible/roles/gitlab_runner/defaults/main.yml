@@ -1,0 +1,9 @@
+---
+gitlab_runner_url: "{{ gitlab_external_url }}"
+gitlab_runner_executor: docker
+gitlab_runner_tags: restricted,docker,kernel
+gitlab_runner_tier: restricted
+gitlab_runner_register_extra: "--docker-privileged=false --docker-dns 1.1.1.1"
+gitlab_runner_registration_token: "{{ vault_gitlab_runner_registration_token }}"
+# e.g. "17.0.3-1" — empty follows apt "latest".
+gitlab_runner_apt_pin_version: ""

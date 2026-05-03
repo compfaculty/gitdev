@@ -1,0 +1,28 @@
+---
+gitlab_manage_packages: true
+gitlab_edition: "ce"
+# Switch to EE when you attach a GitLab EE license blob through Omnibus helpers
+gitlab_package_name: "{{ 'gitlab-ce' if gitlab_edition == 'ce' else 'gitlab-ee' }}"
+
+gitlab_backup_keep_time: "604800"
+gitlab_registry_enabled: true
+
+# S3-compatible off-node backups — set vault_gitlab_backup_* keys in vault.yml before enabling.
+gitlab_backup_object_storage_enabled: false
+gitlab_backup_s3_provider: "AWS"
+gitlab_backup_s3_region: "eu-central-1"
+gitlab_backup_remote_directory: "gitlab-backups"
+gitlab_backup_s3_endpoint: ""
+
+# OpenID Connect (Keycloak/AzureAD/Okta, etc.). Enable only after issuer + redirect URIs match gitlab_external_url.
+gitlab_oidc_enabled: false
+gitlab_oidc_label: "SSO"
+gitlab_oidc_discovery: true
+gitlab_oidc_issuer_url: ""
+gitlab_oidc_scope: ["openid", "profile", "email"]
+gitlab_oidc_uid_field: "sub"
+gitlab_oidc_client_auth_method: "basic"
+
+# OmniBus DEB pin — bump when GitLab publishes next security/monthly patch (`apt-cache madison gitlab-ce` on Noble).
+# 2026-05-03: Noble index latest CE build includes prior security patches (≥18.11.1) + 18.11.2 hotfix deltas.
+gitlab_ce_apt_pin_version: "18.11.2-ce.0"

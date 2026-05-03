@@ -1,0 +1,8 @@
+---
+# Install Omnibus GitLab on gitlab hosts (heavy converge; allocate maintenance window).
+- name: GitLab Omnibus deployment
+  hosts: gitlab
+  serial: 1
+  roles:
+    - common_baseline
+    - gitlab_omnibus

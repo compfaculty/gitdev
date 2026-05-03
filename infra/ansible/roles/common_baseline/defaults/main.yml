@@ -1,0 +1,13 @@
+---
+common_install_fail2ban: false
+nftables_ssh_rate_limit: "10/minute burst 20 packets"
+nftables_ssh_port: "22"
+
+# Runner egress lockdown — enable only after validating Docker/registry mirror reachability O(allowlist cardinality)
+runner_strict_output_egress: false
+runner_egress_dns_ipv4_list:
+  - 1.1.1.1
+  - 9.9.9.9
+# Must include GitLab private IP plus any HTTPS registries runners need (mirror ranges recommended)
+runner_egress_https_ipv4_list:
+  - 10.0.1.10

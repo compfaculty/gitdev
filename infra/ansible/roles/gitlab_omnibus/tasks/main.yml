@@ -1,0 +1,83 @@
+---
+
+- name: Require object-storage backup credentials when enabled
+  ansible.builtin.assert:
+    that:
+      - vault_gitlab_backup_access_key_id | default('') | length > 0
+      - vault_gitlab_backup_secret_access_key | default('') | length > 0
+      - gitlab_backup_remote_directory | default('') | length > 0
+    fail_msg: Define vault_gitlab_backup_access_key_id, vault_gitlab_backup_secret_access_key, and remote directory before enabling gitlab_backup_object_storage_enabled.
+  when:
+    - gitlab_backup_object_storage_enabled | default(false)
+
+- name: Require OIDC issuer + OAuth client when SSO enabled
+  ansible.builtin.assert:
+    that:
+      - gitlab_oidc_issuer_url | default('') | length > 0
+      - vault_gitlab_oidc_client_id | default('') | length > 0
+      - vault_gitlab_oidc_client_secret | default('') | length > 0
+    fail_msg: Populate gitlab_oidc_issuer_url and vault_gitlab_oidc_* in vault.yml before gitlab_oidc_enabled.
+  when:
+    - gitlab_oidc_enabled | default(false)
+
+- name: Install GitLab prerequisites
+  ansible.builtin.apt:
+    name:
+      - curl
+      - openssh-server
+      - tzdata
+    state: present
+    update_cache: true
+
+- name: Bootstrap GitLab package repository (idempotent creates check)
+  ansible.builtin.shell:
+    cmd: curl -sS "{{ gitlab_ce_repo_installer_url }}" | bash
+    creates: "{{ gitlab_ce_apt_source_marker }}"
+  vars:
+    gitlab_ce_repo_installer_url: "https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh"
+    gitlab_ce_apt_source_marker: "/etc/apt/sources.list.d/gitlab_gitlab-ce.list"
+
+- name: Check if Omnibus already installed
+  ansible.builtin.stat:
+    path: /opt/gitlab/version-manifest.txt
+  register: gitlab_manifest
+
+- name: First-time Omnibus install (sets root password when supported)
+  ansible.builtin.shell: >-
+    DEBIAN_FRONTEND=noninteractive
+    EXTERNAL_URL="{{ gitlab_external_url }}"
+    GITLAB_ROOT_PASSWORD="{{ gitlab_initial_root_password }}"
+    apt-get update &&
+    apt-get install -y {{ gitlab_pkg_apt_pattern }}
+  when: not gitlab_manifest.stat.exists
+  changed_when: true
+  vars:
+    gitlab_pkg_apt_pattern: "{{ gitlab_package_name }}{{ '=' ~ gitlab_ce_apt_pin_version if (gitlab_ce_apt_pin_version | default('') | length > 0) else '' }}"
+
+- name: Upgrade or pin Omnibus package (installed hosts)
+  ansible.builtin.apt:
+    name: "{{ gitlab_pkg_apt_pattern }}"
+    state: "{{ 'present' if (gitlab_ce_apt_pin_version | default('') | length > 0) else 'latest' }}"
+    update_cache: true
+  when: gitlab_manifest.stat.exists
+  vars:
+    gitlab_pkg_apt_pattern: "{{ gitlab_package_name }}{{ '=' ~ gitlab_ce_apt_pin_version if (gitlab_ce_apt_pin_version | default('') | length > 0) else '' }}"
+
+- name: Deploy Omnibus customization
+  ansible.builtin.template:
+    src: gitlab.rb.j2
+    dest: /etc/gitlab/gitlab.rb
+    mode: "0600"
+  notify: Reconfigure GitLab
+
+- name: Force reconfigure once after template deployment
+  ansible.builtin.meta: flush_handlers
+
+- name: Nightly omnibus backups
+  ansible.builtin.cron:
+    name: GitLab nightly backup
+    minute: "15"
+    hour: "2"
+    job: "/opt/gitlab/bin/gitlab-backup create CRON=1 >> /var/log/gitlab-backup.log 2>&1"
+    user: root
+  when: gitlab_backup_cron | default(true)

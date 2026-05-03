@@ -1,0 +1,7 @@
+---
+- name: WireGuard VPN gateway
+  hosts: bastion
+  gather_facts: true
+  roles:
+    - common_baseline
+    - bastion_wireguard

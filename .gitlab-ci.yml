@@ -1,0 +1,17 @@
+---
+# IaC pipeline entrypoint — wire tokens as protected CI/CD variables :
+# TF_STATE_* HCLOUD_TOKEN (masked/protected)
+
+include:
+  - local: infra/ci/terraform.gitlab-ci.yml
+  - local: infra/ci/ansible.gitlab-ci.yml
+
+stages:
+  - validate
+  - plan
+  - apply
+
+default:
+  image: alpine:3.21
+  before_script:
+    - apk add --no-cache bash ca-certificates

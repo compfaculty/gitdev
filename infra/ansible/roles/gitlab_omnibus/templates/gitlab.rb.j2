@@ -1,0 +1,62 @@
+external_url "{{ gitlab_external_url }}"
+
+gitlab_rails['backup_keep_time'] = "{{ gitlab_backup_keep_time }}"
+gitlab_rails['time_zone'] = "{{ timezone | default('UTC') }}"
+registry['enable'] = {{ gitlab_registry_enabled | lower }}
+
+# Audit / SIEM: Admin → Audit events UI + attach host syslog/forwarder bundle (omit brittle omnibus knobs here).
+
+{% if gitlab_backup_object_storage_enabled | bool %}
+gitlab_rails['backup_upload_remote_directory'] = '{{ gitlab_backup_remote_directory }}'
+{% if gitlab_backup_s3_endpoint | default('') | length > 0 %}
+gitlab_rails['backup_upload_connection'] = {
+  'provider' => '{{ gitlab_backup_s3_provider }}',
+  'region' => '{{ gitlab_backup_s3_region }}',
+  'aws_access_key_id' => '{{ vault_gitlab_backup_access_key_id }}',
+  'aws_secret_access_key' => '{{ vault_gitlab_backup_secret_access_key }}',
+  'endpoint' => '{{ gitlab_backup_s3_endpoint }}',
+  'path_style' => true
+}
+{% else %}
+gitlab_rails['backup_upload_connection'] = {
+  'provider' => '{{ gitlab_backup_s3_provider }}',
+  'region' => '{{ gitlab_backup_s3_region }}',
+  'aws_access_key_id' => '{{ vault_gitlab_backup_access_key_id }}',
+  'aws_secret_access_key' => '{{ vault_gitlab_backup_secret_access_key }}'
+}
+{% endif %}
+{% endif %}
+
+{% if gitlab_oidc_enabled | bool %}
+gitlab_rails['omniauth_enabled'] = true
+gitlab_rails['omniauth_allow_single_sign_on'] = ['openid_connect']
+gitlab_rails['omniauth_block_auto_created_users'] = false
+
+gitlab_rails['omniauth_providers'] = [
+  {
+    'name' => 'openid_connect',
+    'label' => '{{ gitlab_oidc_label }}',
+    'args' => {
+      'name' => 'openid_connect',
+      'scope' => ['openid', 'profile', 'email'],
+      'response_type' => 'code',
+      'issuer' => '{{ gitlab_oidc_issuer_url }}',
+      'discovery' => {{ 'true' if gitlab_oidc_discovery else 'false' }},
+      'uid_field' => '{{ gitlab_oidc_uid_field }}',
+      'client_auth_method' => '{{ gitlab_oidc_client_auth_method }}',
+      'client_options' => {
+        'identifier' => '{{ vault_gitlab_oidc_client_id }}',
+        'secret' => '{{ vault_gitlab_oidc_client_secret }}',
+        'redirect_uri' => '{{ (gitlab_external_url | regex_replace("/$","")) }}/users/auth/openid_connect/callback'
+      },
+      'pkce' => true,
+      'send_scope_to_token_endpoint' => true
+    }
+  }
+]
+{% endif %}
+
+{% if nginx_ssl_certificate | default('') %}
+nginx['ssl_certificate'] = "{{ nginx_ssl_certificate }}"
+nginx['ssl_certificate_key'] = "{{ nginx_ssl_certificate_key }}"
+{% endif %}

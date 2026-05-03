@@ -1,0 +1,4 @@
+---
+# Extra host-hardening on public-exposed bastion (Stage 1 abuse resistance)
+common_install_fail2ban: true
+nftables_ssh_rate_limit: "5/minute burst 10 packets"

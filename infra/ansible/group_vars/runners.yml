@@ -1,0 +1,14 @@
+---
+gitlab_runner_executor: docker
+gitlab_runner_tags: "restricted,docker,isolated-net"
+# Install Docker engine for executor
+docker_install_required: true
+
+# Optional: lock runner host egress to DNS + HTTPS allowlists (Docker Hub needs extra mirror/CIDR plumbing)
+runner_strict_output_egress: false
+runner_egress_https_ipv4_list:
+  - "{{ platform_gitlab_private_ip }}"
+# Add corporate mirror / ghcr ranges before enabling strict mode — see docs/howto/runner_network_isolation.md
+
+# 2026-05-03: Noble runner channel latest aligning with OmniBus CE 18.11 train.
+gitlab_runner_apt_pin_version: "18.11.2-1"

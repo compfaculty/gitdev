@@ -1,0 +1,20 @@
+# Compose reference — bump image tag deliberately after vulnerability advisories.
+# Complexity: coordinator state O(users * nodes); SQLite default OK for labs < few-thousand records.
+services:
+  headscale:
+    image: "headscale/headscale:0.28"
+    restart: unless-stopped
+    container_name: headscale
+    volumes:
+      - ./data:/var/lib/headscale
+      - ./config.yaml:/etc/headscale/config.yaml:ro
+    command: serve
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:9090:9090"
+    networks:
+      - hs
+
+networks:
+  hs:
+    driver: bridge

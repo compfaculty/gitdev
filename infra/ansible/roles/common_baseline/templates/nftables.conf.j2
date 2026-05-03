@@ -1,0 +1,33 @@
+#!/usr/sbin/nft -f
+flush ruleset
+
+table inet filter {
+  chain input {
+    type filter hook input priority filter; policy drop;
+    ct state established,related accept
+    iif "lo" accept
+    ip protocol icmp accept
+    ip6 nexthdr icmpv6 accept
+    tcp dport {{ nftables_ssh_port }} limit rate {{ nftables_ssh_rate_limit }} accept
+  }
+
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+  }
+
+{% if runner_strict_output_egress | default(false) %}
+  chain output {
+    type filter hook output priority filter; policy drop;
+    ct state established,related accept
+    oifname "lo" accept
+    ip protocol icmp accept
+    ip6 nexthdr icmpv6 accept
+    udp dport 53 ip daddr { {{ runner_egress_dns_ipv4_list | join(', ') }} } accept
+    tcp dport 443 ip daddr { {{ runner_egress_https_ipv4_list | join(', ') }} } accept
+  }
+{% else %}
+  chain output {
+    type filter hook output priority filter; policy accept;
+  }
+{% endif %}
+}

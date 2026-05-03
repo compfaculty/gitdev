@@ -1,0 +1,7 @@
+---
+# Apply baseline nftables + SSH hardening to all infrastructure hosts
+- name: Baseline hardening
+  hosts: bastion:gitlab:runners
+  gather_facts: true
+  roles:
+    - common_baseline

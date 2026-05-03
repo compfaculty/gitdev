@@ -1,0 +1,17 @@
+---
+# Minimal shared vars; secrets via ansible-vault or GitLab CI protected variables
+timezone: Etc/UTC
+
+# nftables baseline (complexity O(1) per connection at kernel level)
+nftables_ssh_rate_limit: "10/minute burst 20 packets"
+nftables_ssh_port: "22"
+
+# Platform GitLab canonical private IP — keep aligned with Terraform `gitlab_core.private_ip`
+platform_gitlab_private_ip: "10.0.1.10"
+
+# GitLab Omnibus EXTERNAL_URL — MUST match routed DNS over VPN OR IP literal (OmniBus self-signed HTTPS if IP).
+gitlab_external_url: "https://10.0.1.10"
+gitlab_internal_listen: "443"
+
+# Populate group_vars/vault.yml (encrypt with ansible-vault) with:
+#   vault_gitlab_runner_registration_token / vault_wireguard_* / vault_gitlab_root_password

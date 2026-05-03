@@ -1,0 +1,50 @@
+---
+# CVE-hotfix oriented converge — SEE docs/howto/security_patching_and_cves.md
+# Example:
+#   ansible-playbook patch_critical_stack.yml -i inventory/prod.yml \
+#     Defaults live in group_vars — 2026-05-03 noble scrape: CE 18.11.2-ce.0 , runner 18.11.2-1 .
+#     Override with extra vars only for emergency divergent pins.
+#     --ask-vault-pass
+#
+# Complexity: Serial GitLab + runners — wall clock dominated by Omnibus chef phase.
+
+- name: Pre-upgrade Omnibus logical backup checkpoint
+  hosts: gitlab
+  serial: 1
+  gather_facts: false
+  tasks:
+    - name: Ensure backup binary exists before emergency patch
+      ansible.builtin.stat:
+        path: /opt/gitlab/bin/gitlab-backup
+      register: gb
+
+    - name: Run Omnibus filesystem backup before package bump
+      ansible.builtin.command:
+        argv:
+          - /opt/gitlab/bin/gitlab-backup
+          - create
+          - CRON=1
+          - SKIP={{ patch_gitlab_backup_skip | default('artifacts,uploads') }}
+      changed_when: true
+      when: gb.stat.exists | bool
+
+- name: Re-converge GitLab Omnibus (installs pinned or latest APT per group_vars/extra-vars)
+  hosts: gitlab
+  serial: 1
+  roles:
+    - common_baseline
+    - gitlab_omnibus
+  tags: [gitlab, omnibus]
+
+- name: Upgrade GitLab Runners APT + bounce service
+  hosts: runners
+  serial: 1
+  roles:
+    - common_baseline
+    - gitlab_runner
+  post_tasks:
+    - name: Ensure runner daemon picks new binary
+      ansible.builtin.service:
+        name: gitlab-runner
+        state: restarted
+  tags: [runners]

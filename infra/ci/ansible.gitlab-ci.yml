@@ -1,0 +1,33 @@
+# Ansible CI — syntax validation only unless self-hosted Runner has SSH/VPN tunnel to targets.
+ansible_syntax:
+  interruptible: true
+  stage: validate
+  image: python:3.12-slim-trixie
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    ANSIBLE_CONFIG: "$CI_PROJECT_DIR/infra/ansible/ansible.cfg"
+  cache:
+    paths:
+      - .cache/pip
+  before_script:
+    - pip install --no-cache-dir "ansible-core>=2.17,<2.21"
+  script:
+    - cd infra/ansible
+    - ansible-playbook --syntax-check playbooks/hardening.yml -i inventory/example.hosts.yml
+    - ansible-playbook --syntax-check playbooks/bastion.yml -i inventory/example.hosts.yml
+    - ansible-playbook --syntax-check playbooks/gitlab.yml -i inventory/example.hosts.yml
+    - ansible-playbook --syntax-check playbooks/runners.yml -i inventory/example.hosts.yml
+    - ansible-playbook --syntax-check playbooks/site.yml -i inventory/example.hosts.yml
+    - ansible-playbook --syntax-check playbooks/patch_critical_stack.yml -i inventory/example.hosts.yml
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+# Uncomment when a Runner joins the VPC and ANSIBLE_SSH_* credentials are wired as masked variables:
+# ansible_converge_dry_run:
+#   stage: ansible
+#   image: ...
+#   script:
+#     - ansible-playbook --check infra/ansible/playbooks/site.yml -i "$ANSIBLE_INVENTORY_PATH"

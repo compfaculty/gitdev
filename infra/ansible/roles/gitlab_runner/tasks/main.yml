@@ -1,0 +1,45 @@
+---
+
+- name: Require GitLab runner registration token
+  ansible.builtin.assert:
+    that:
+      - gitlab_runner_registration_token | default('') | length > 0
+      - gitlab_runner_registration_token != 'FROM_GITLAB_ADMIN_RUNNER_TOKEN'
+    fail_msg: Provide vault_gitlab_runner_registration_token inside encrypted group_vars/vault.yml before converging runners.
+
+- name: Install Docker CE for docker executor jobs
+  ansible.builtin.import_tasks: docker.yml
+  when:
+    - gitlab_runner_executor == "docker"
+    - docker_install_required | default(true)
+
+- name: Add GitLab Runner repository key
+  ansible.builtin.apt_key:
+    url: https://packages.gitlab.com/gpg.key
+    state: present
+
+- name: Configure GitLab Runner APT repository
+  ansible.builtin.apt_repository:
+    repo: "deb https://packages.gitlab.com/runner/gitlab-runner/ubuntu/ {{ ansible_distribution_release }} main"
+    state: present
+
+- name: Install or upgrade GitLab Runner (pinned or latest)
+  ansible.builtin.apt:
+    name: "{{ gitlab_pkg_runner }}"
+    state: "{{ 'present' if (gitlab_runner_apt_pin_version | default('') | length > 0) else 'latest' }}"
+    update_cache: true
+  vars:
+    gitlab_pkg_runner: "{{ 'gitlab-runner=' ~ gitlab_runner_apt_pin_version if (gitlab_runner_apt_pin_version | default('') | length > 0) else 'gitlab-runner' }}"
+
+- name: Register runner (Docker executor; extend lockdown separately)
+  ansible.builtin.shell: >-
+    gitlab-runner register --non-interactive
+    --url "{{ gitlab_runner_url }}"
+    --registration-token "{{ gitlab_runner_registration_token }}"
+    --executor "{{ gitlab_runner_executor }}"
+    --description "{{ ansible_hostname }}-{{ gitlab_runner_tier }}"
+    --tag-list "{{ gitlab_runner_tags }}"
+    --docker-image alpine:latest
+    {{ gitlab_runner_register_extra }}
+  args:
+    creates: /etc/gitlab-runner/config.toml

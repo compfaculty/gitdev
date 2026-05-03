@@ -1,0 +1,7 @@
+---
+- name: Install GitLab Runners with isolated egress (Ansible configures OS; nftables tightened per runner playbook extension)
+  hosts: runners
+  serial: 1
+  roles:
+    - common_baseline
+    - gitlab_runner

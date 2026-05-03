@@ -1,0 +1,21 @@
+# Copy to inventory/prod.hosts.yml and fill from `terraform output ansible_inventory_snippet`
+# After WireGuard VPN: use bastion as ProxyJump so GitLab/private runners are reachable
+all:
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    # ansible_ssh_common_args: '-o ProxyJump=root@YOUR_BASTION_PUBLIC_IP'
+  children:
+    bastion:
+      hosts:
+        bastion1:
+          ansible_host: REPLACE_BASTION_PUBLIC_IP
+          private_ip: 10.0.1.2
+    gitlab:
+      hosts:
+        gitlab1:
+          ansible_host: 10.0.1.10
+          private_ip: 10.0.1.10
+    runners:
+      hosts:
+        runner0:
+          ansible_host: 10.0.2.20
